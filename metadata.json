@@ -1,0 +1,6 @@
+{
+  "name": "KasKu Digital",
+  "description": "Aplikasi Pembayaran & Pengelolaan Uang Kas Digital Transparan untuk Kelas & Organisasi.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
