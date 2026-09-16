@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
-import { Role } from '../types';
-import { Settings, Users, Shield, Building, CreditCard, RefreshCw, Plus, Trash2, Edit2, CheckCircle2, History } from 'lucide-react';
+import { Role, User } from '../types';
+import { Settings, Users, Shield, Building, CreditCard, RefreshCw, Plus, Trash2, Edit2, CheckCircle2, History, Camera, UserX, Edit3 } from 'lucide-react';
+import { ProfilePhotoModal } from './ProfilePhotoModal';
+import { DeleteMemberModal } from './DeleteMemberModal';
+import { EditNameModal } from './EditNameModal';
 
 export const AdminDashboard: React.FC = () => {
-  const { classGroup, updateClassGroup, users, addUser, updateUser, resetDemoData } = useApp();
+  const { classGroup, updateClassGroup, users, addUser, updateUser, resetDemoData, switchUser } = useApp();
 
   const [activeTab, setActiveTab] = useState<'users' | 'class' | 'logs'>('users');
+  const [selectedUserForPhoto, setSelectedUserForPhoto] = useState<User | null>(null);
+  const [selectedUserForEditName, setSelectedUserForEditName] = useState<User | null>(null);
+  const [selectedUserForDelete, setSelectedUserForDelete] = useState<User | null>(null);
 
   // Class settings form
   const [className, setClassName] = useState(classGroup.name);
@@ -112,7 +118,7 @@ export const AdminDashboard: React.FC = () => {
       {activeTab === 'users' && (
         <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="font-bold text-slate-900 text-base">Daftar Pengguna Sistem KasKu</h2>
+            <h2 className="font-bold text-slate-900 text-base">Daftar Pengguna Sistem Class Fund</h2>
             <button
               onClick={() => setShowAddUserModal(true)}
               className="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold text-xs flex items-center space-x-1 shadow-sm"
@@ -130,16 +136,58 @@ export const AdminDashboard: React.FC = () => {
                   <th className="py-3 px-4">Email / HP</th>
                   <th className="py-3 px-4">Role Hak Akses</th>
                   <th className="py-3 px-4">ID Member QR</th>
-                  <th className="py-3 px-4 text-right">Ubah Role</th>
+                  <th className="py-3 px-4 text-center">Ubah Role</th>
+                  <th className="py-3 px-4 text-right">Aksi</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 font-medium">
                 {users.map((u) => (
-                  <tr key={u.id} className="hover:bg-slate-50">
+                  <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                     <td className="py-3.5 px-4">
                       <div className="flex items-center space-x-3">
-                        <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full object-cover" />
-                        <span className="font-bold text-slate-900">{u.name}</span>
+                        <div
+                          onClick={() => {
+                            switchUser(u.id);
+                            setSelectedUserForPhoto(u);
+                          }}
+                          className="relative group cursor-pointer shrink-0"
+                          title="Klik untuk mengubah foto profil"
+                        >
+                          <img src={u.avatar} alt={u.name} className="w-8 h-8 rounded-full object-cover border border-slate-200" />
+                          <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Camera className="w-3.5 h-3.5 text-white" />
+                          </div>
+                        </div>
+                        <div>
+                          <div className="flex items-center space-x-1.5">
+                            <span className="font-bold text-slate-900 block">{u.name}</span>
+                            <button
+                              onClick={() => setSelectedUserForEditName(u)}
+                              className="p-1 text-slate-400 hover:text-[#2563EB] hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                              title={`Ubah nama ${u.name}`}
+                            >
+                              <Edit3 className="w-3 h-3" />
+                            </button>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => {
+                                switchUser(u.id);
+                                setSelectedUserForPhoto(u);
+                              }}
+                              className="text-[10px] text-[#2563EB] hover:underline font-bold"
+                            >
+                              Ubah Foto
+                            </button>
+                            <span className="text-slate-300 text-[10px]">•</span>
+                            <button
+                              onClick={() => setSelectedUserForEditName(u)}
+                              className="text-[10px] text-slate-500 hover:text-[#2563EB] hover:underline font-bold"
+                            >
+                              Ganti Nama
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </td>
                     <td className="py-3.5 px-4 text-slate-600">
@@ -160,16 +208,26 @@ export const AdminDashboard: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-3.5 px-4 font-mono text-[10px] text-slate-500">{u.memberQrCode}</td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3.5 px-4 text-center">
                       <select
                         value={u.role}
                         onChange={(e) => updateUser(u.id, { role: e.target.value as Role })}
-                        className="px-2 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800"
+                        className="px-2.5 py-1 rounded-lg border border-slate-200 text-[11px] font-bold text-slate-800 bg-white shadow-2xs"
                       >
                         <option value="anggota">Anggota</option>
                         <option value="bendahara">Bendahara</option>
                         <option value="admin">Admin</option>
                       </select>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <button
+                        onClick={() => setSelectedUserForDelete(u)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer inline-flex items-center space-x-1"
+                        title={`Hapus ${u.name}`}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                        <span className="text-[11px] font-bold hidden sm:inline">Hapus</span>
+                      </button>
                     </td>
                   </tr>
                 ))}
@@ -292,7 +350,7 @@ export const AdminDashboard: React.FC = () => {
               <input
                 type="text"
                 required
-                placeholder="Contoh: Rian Hidayat"
+                placeholder="Contoh: Anggota #11"
                 value={newUserName}
                 onChange={(e) => setNewUserName(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium"
@@ -304,7 +362,7 @@ export const AdminDashboard: React.FC = () => {
               <input
                 type="email"
                 required
-                placeholder="rian@mipa1.sch.id"
+                placeholder="anggota11@mipa1.sch.id"
                 value={newUserEmail}
                 onChange={(e) => setNewUserEmail(e.target.value)}
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 font-medium"
@@ -342,6 +400,26 @@ export const AdminDashboard: React.FC = () => {
           </form>
         </div>
       )}
+
+      {/* Profile Photo Modal */}
+      <ProfilePhotoModal
+        isOpen={Boolean(selectedUserForPhoto)}
+        onClose={() => setSelectedUserForPhoto(null)}
+      />
+
+      {/* Delete Member Confirmation Modal */}
+      <DeleteMemberModal
+        user={selectedUserForDelete}
+        isOpen={Boolean(selectedUserForDelete)}
+        onClose={() => setSelectedUserForDelete(null)}
+      />
+
+      {/* Edit User Name Modal */}
+      <EditNameModal
+        user={selectedUserForEditName}
+        isOpen={Boolean(selectedUserForEditName)}
+        onClose={() => setSelectedUserForEditName(null)}
+      />
     </div>
   );
 };

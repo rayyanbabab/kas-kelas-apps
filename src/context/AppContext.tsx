@@ -11,12 +11,14 @@ interface AppContextType {
   users: User[];
   addUser: (user: Omit<User, 'id'>) => void;
   updateUser: (id: string, updated: Partial<User>) => void;
+  deleteUser: (id: string, deletePaymentHistory?: boolean) => void;
   payments: Payment[];
   addPayment: (payment: Omit<Payment, 'id' | 'transactionId'>) => Payment;
   verifyPayment: (paymentId: string, status: PaymentStatus, notes?: string) => void;
-  markPaidManual: (userId: string, monthPeriod: string, amount: number) => void;
+  markPaidManual: (userId: string, monthPeriod: string, amount: number, weekPeriod?: string) => void;
   expenses: Expense[];
   addExpense: (expense: Omit<Expense, 'id'>) => void;
+  updateExpense: (id: string, updated: Partial<Expense>) => void;
   deleteExpense: (id: string) => void;
   notifications: Notification[];
   markNotificationRead: (id: string) => void;
@@ -34,7 +36,7 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'kasku_digital_state_v1';
+const STORAGE_KEY = 'kasku_digital_state_v4';
 
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [users, setUsers] = useState<User[]>(() => {
@@ -113,10 +115,68 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const updateUser = (id: string, updated: Partial<User>) => {
+    const existingUser = users.find((u) => u.id === id);
     setUsers((prev) => prev.map((u) => (u.id === id ? { ...u, ...updated } : u)));
+    
     if (currentUser.id === id) {
       setCurrentUser((prev) => ({ ...prev, ...updated }));
     }
+
+    // If name is updated, sync payment history name & treasurer name
+    if (updated.name && existingUser && updated.name !== existingUser.name) {
+      setPayments((prev) =>
+        prev.map((p) => (p.userId === id ? { ...p, userName: updated.name! } : p))
+      );
+
+      if (existingUser.role === 'bendahara' && classGroup.treasurerName === existingUser.name) {
+        setClassGroup((prev) => ({ ...prev, treasurerName: updated.name! }));
+      }
+
+      const newNotif: Notification = {
+        id: `notif-${Date.now()}`,
+        userId: id,
+        title: 'Nama Berhasil Diperbarui ✏️',
+        message: `Nama profil berhasil diubah dari "${existingUser.name}" menjadi "${updated.name}".`,
+        isRead: false,
+        createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+        type: 'verification',
+      };
+      setNotifications((prev) => [newNotif, ...prev]);
+    }
+  };
+
+  const deleteUser = (id: string, deletePaymentHistory: boolean = false) => {
+    const userToDelete = users.find((u) => u.id === id);
+    if (!userToDelete) return;
+
+    // Remove user
+    const remainingUsers = users.filter((u) => u.id !== id);
+    setUsers(remainingUsers);
+
+    // If current active user is deleted, fallback to another user
+    if (currentUser.id === id) {
+      const fallbackUser = remainingUsers.find((u) => u.role === 'admin') || remainingUsers[0];
+      if (fallbackUser) {
+        setCurrentUser(fallbackUser);
+      }
+    }
+
+    // Handle payments
+    if (deletePaymentHistory) {
+      setPayments((prev) => prev.filter((p) => p.userId !== id));
+    }
+
+    // Add audit notification
+    const newNotif: Notification = {
+      id: `notif-${Date.now()}`,
+      userId: 'system',
+      title: 'Anggota Dihapus 🗑️',
+      message: `Akun anggota "${userToDelete.name}" (${userToDelete.email}) telah berhasil dihapus dari sistem kas kelas.`,
+      isRead: false,
+      createdAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
+      type: 'verification',
+    };
+    setNotifications((prev) => [newNotif, ...prev]);
   };
 
   // Payment Handlers
@@ -188,7 +248,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  const markPaidManual = (userId: string, monthPeriod: string, amount: number) => {
+  const markPaidManual = (userId: string, monthPeriod: string, amount: number, weekPeriod?: string) => {
     const userObj = users.find((u) => u.id === userId);
     if (!userObj) return;
 
@@ -198,9 +258,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       amount,
       date: new Date().toISOString().split('T')[0],
       monthPeriod,
+      weekPeriod: weekPeriod || (amount === classGroup.weeklyDues ? 'Minggu 1' : '1 Bulan Penuh (Minggu 1 - 4)'),
       method: 'cash_manual',
       status: 'lunas',
-      notes: 'Ditandai lunas manual oleh Bendahara',
+      notes: `Setor tunai dicatat oleh Bendahara (${weekPeriod || 'Lunas'})`,
       verifiedAt: new Date().toISOString().replace('T', ' ').substring(0, 16),
       verifiedBy: currentUser.name,
     });
@@ -214,6 +275,12 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       recordedBy: currentUser.name,
     };
     setExpenses((prev) => [newExpense, ...prev]);
+  };
+
+  const updateExpense = (id: string, updated: Partial<Expense>) => {
+    setExpenses((prev) =>
+      prev.map((e) => (e.id === id ? { ...e, ...updated } : e))
+    );
   };
 
   const deleteExpense = (id: string) => {
@@ -230,8 +297,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   };
 
   const sendReminder = (targetUserId: string | 'all', title?: string, message?: string) => {
-    const defaultTitle = 'Pengingat Uang Kas ⚠️';
-    const defaultMsg = `Halo! Diingatkan untuk segera melunasi tagihan kas bulan ${classGroup.period} sebesar Rp${classGroup.monthlyDues.toLocaleString('id-ID')}.`;
+    const defaultTitle = 'Pengingat Uang Kas (Rp 6.000/mg) ⚠️';
+    const defaultMsg = `Halo! Diingatkan untuk membayar kas kelas ${classGroup.period} (Rp 6.000 / minggu atau Rp 24.000 / bulan).`;
 
     if (targetUserId === 'all') {
       const unpaidMembers = users.filter((u) => {
@@ -314,12 +381,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         users,
         addUser,
         updateUser,
+        deleteUser,
         payments,
         addPayment,
         verifyPayment,
         markPaidManual,
         expenses,
         addExpense,
+        updateExpense,
         deleteExpense,
         notifications,
         markNotificationRead,

@@ -141,7 +141,7 @@ export const PaymentHistoryView: React.FC = () => {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full p-6 relative border border-slate-100 space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-              <h3 className="font-extrabold text-slate-900 text-base">Struk Digital KasKu</h3>
+              <h3 className="font-extrabold text-slate-900 text-base">Struk Digital Class Fund</h3>
               <button
                 onClick={() => setSelectedTxn(null)}
                 className="p-1.5 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-100"

@@ -9,6 +9,7 @@ import { ExpensesManager } from './components/ExpensesManager';
 import { FinancialReportView } from './components/FinancialReportView';
 import { AdminDashboard } from './components/AdminDashboard';
 import { MemberQrModal } from './components/MemberQrModal';
+import { AccessDeniedBanner } from './components/AccessDeniedBanner';
 import { Home, CreditCard, History, FileText, PlusCircle, Settings, QrCode } from 'lucide-react';
 
 function AppContent() {
@@ -16,6 +17,9 @@ function AppContent() {
   const [activeTab, setActiveTab] = useState<string>('dashboard');
   const [isPayModalOpen, setIsPayModalOpen] = useState<boolean>(false);
   const [isQrModalOpen, setIsQrModalOpen] = useState<boolean>(false);
+
+  const isTreasurerOrAdmin = currentUser.role === 'bendahara' || currentUser.role === 'admin';
+  const isAdmin = currentUser.role === 'admin';
 
   return (
     <div className="min-h-screen bg-[#F0F4F8] text-[#1E293B] font-sans flex flex-col pb-20 md:pb-8">
@@ -55,13 +59,31 @@ function AppContent() {
 
         {activeTab === 'riwayat' && <PaymentHistoryView />}
 
-        {activeTab === 'pembayaran' && <TreasurerDashboard setActiveTab={setActiveTab} />}
+        {activeTab === 'pembayaran' && (
+          isTreasurerOrAdmin ? (
+            <TreasurerDashboard setActiveTab={setActiveTab} />
+          ) : (
+            <AccessDeniedBanner requiredRole="Bendahara" setActiveTab={setActiveTab} />
+          )
+        )}
 
-        {activeTab === 'pengeluaran' && <ExpensesManager />}
+        {activeTab === 'pengeluaran' && (
+          isTreasurerOrAdmin ? (
+            <ExpensesManager />
+          ) : (
+            <AccessDeniedBanner requiredRole="Bendahara" setActiveTab={setActiveTab} />
+          )
+        )}
 
-        {activeTab === 'laporan' && <FinancialReportView />}
+        {activeTab === 'laporan' && <FinancialReportView setActiveTab={setActiveTab} />}
 
-        {activeTab === 'admin' && <AdminDashboard />}
+        {activeTab === 'admin' && (
+          isAdmin ? (
+            <AdminDashboard />
+          ) : (
+            <AccessDeniedBanner requiredRole="Admin Sistem" setActiveTab={setActiveTab} />
+          )
+        )}
       </main>
 
       {/* Global Modals */}

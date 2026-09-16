@@ -51,6 +51,8 @@ export interface Payment {
   amount: number;
   date: string; // YYYY-MM-DD
   monthPeriod: string; // e.g., "Agustus 2026"
+  weekPeriod?: string; // e.g. "Minggu 1", "Minggu 2", "Minggu 1-4", "1 Bulan Penuh"
+  weeksPaid?: number[]; // [1, 2, 3, 4]
   method: PaymentMethod;
   status: PaymentStatus;
   transactionId: string;
