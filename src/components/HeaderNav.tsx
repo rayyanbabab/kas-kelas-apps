@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import { Role } from '../types';
-import { Bell, CheckCircle, ShieldCheck, UserCheck, Users, QrCode, RefreshCw, Sparkles, ChevronDown, ShieldAlert, Info, Camera, Edit3 } from 'lucide-react';
+import { Bell, CheckCircle2, QrCode, RefreshCw, Sparkles, ChevronDown, Info, Camera, Edit3, Database, LogOut } from 'lucide-react';
 import { RolePermissionModal } from './RolePermissionModal';
 import { ProfilePhotoModal } from './ProfilePhotoModal';
 import { EditNameModal } from './EditNameModal';
+import { DatabaseModal } from './DatabaseModal';
 
 interface HeaderNavProps {
   activeTab: string;
@@ -13,12 +14,13 @@ interface HeaderNavProps {
 }
 
 export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, onOpenQrModal }) => {
-  const { currentUser, switchRole, switchUser, users, notifications, markNotificationRead, markAllNotificationsRead, resetDemoData, classGroup } = useApp();
+  const { currentUser, switchRole, switchUser, users, notifications, markNotificationRead, markAllNotificationsRead, resetDemoData, classGroup, dbStatus, isLoading, logout } = useApp();
   const [showNotificationsPopover, setShowNotificationsPopover] = useState(false);
   const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [showPermissionModal, setShowPermissionModal] = useState(false);
   const [showProfilePhotoModal, setShowProfilePhotoModal] = useState(false);
   const [showEditNameModal, setShowEditNameModal] = useState(false);
+  const [showDatabaseModal, setShowDatabaseModal] = useState(false);
 
   const myNotifications = notifications.filter(
     (n) => n.userId === currentUser.id || n.userId === 'all'
@@ -26,22 +28,22 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
   const unreadCount = myNotifications.filter((n) => !n.isRead).length;
   const memberCount = users.filter((u) => u.role === 'anggota').length;
 
-  const roleColors: Record<Role, { bg: string; border: string; label: string; badge: string }> = {
-    anggota: { bg: 'bg-emerald-50 text-emerald-700', border: 'border-emerald-200', label: `👦 Anggota (${memberCount} Orang)`, badge: 'bg-emerald-600' },
-    bendahara: { bg: 'bg-blue-50 text-blue-700', border: 'border-blue-200', label: '👩‍💼 Bendahara', badge: 'bg-[#2563EB]' },
-    admin: { bg: 'bg-purple-50 text-purple-700', border: 'border-purple-200', label: '⚙️ Admin', badge: 'bg-purple-600' },
+  const roleMeta: Record<Role, { label: string; badge: string }> = {
+    anggota: { label: `Anggota (${memberCount})`, badge: 'bg-emerald-500' },
+    bendahara: { label: 'Bendahara', badge: 'bg-blue-600' },
+    admin: { label: 'Admin', badge: 'bg-purple-600' },
   };
 
   return (
     <>
-      <header className="sticky top-0 z-30 bg-[#2563EB] text-white shadow-lg">
-        {/* Demo Switcher Bar Top */}
-        <div className="bg-[#1E293B] text-slate-200 px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-2 border-b border-white/10">
+      <header className="sticky top-0 z-30 bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 text-white shadow-md">
+        {/* Clean Minimal Role Switcher Top Bar */}
+        <div className="bg-slate-900/90 backdrop-blur-md text-slate-300 px-4 py-1.5 text-xs flex flex-wrap items-center justify-between gap-2 border-b border-white/10">
           <div className="flex items-center space-x-2">
-            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#2563EB] text-white font-black text-[10px] tracking-wider uppercase">
-              SIMULATOR HAK AKSES
+            <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-300 font-bold text-[10px] tracking-wide uppercase border border-blue-400/30">
+              Role Switcher
             </span>
-            <span className="text-slate-300 font-bold text-[11px] hidden sm:inline uppercase tracking-wider">Pilih Role:</span>
+            <span className="text-slate-400 font-medium text-xs hidden sm:inline">Simulasi Hak Akses:</span>
           </div>
 
           <div className="flex items-center space-x-1.5 overflow-x-auto">
@@ -51,66 +53,80 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
                 <button
                   key={r}
                   onClick={() => switchRole(r)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold transition-all flex items-center space-x-1 uppercase tracking-wider cursor-pointer ${
+                  className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center space-x-1.5 cursor-pointer ${
                     isActive
-                      ? 'bg-[#2563EB] text-white shadow-sm ring-2 ring-white/30 font-black'
-                      : 'bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                      ? 'bg-blue-600 text-white shadow-sm ring-1 ring-white/30 font-bold'
+                      : 'bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white'
                   }`}
                 >
-                  <span>{roleColors[r].label}</span>
-                  {isActive && <CheckCircle className="w-3.5 h-3.5 text-green-400" />}
+                  <span className={`w-1.5 h-1.5 rounded-full ${roleMeta[r].badge}`} />
+                  <span>{roleMeta[r].label}</span>
                 </button>
               );
             })}
 
             <button
               onClick={() => setShowPermissionModal(true)}
-              className="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-amber-300 hover:text-amber-200 font-bold text-[11px] uppercase tracking-wider flex items-center space-x-1 border border-amber-400/30 cursor-pointer ml-1"
-              title="Lihat Perbedaan Hak Akses Bendahara & Anggota"
+              className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-amber-300 font-semibold text-xs flex items-center space-x-1 border border-amber-400/30 cursor-pointer ml-1 transition-colors"
+              title="Perbedaan Hak Akses"
             >
-              <Info className="w-3 h-3" />
-              <span>Info Hak Akses</span>
+              <Info className="w-3.5 h-3.5" />
+              <span className="hidden sm:inline">Hak Akses</span>
+            </button>
+
+            <button
+              onClick={() => setShowDatabaseModal(true)}
+              title="Status Database Neon (PostgreSQL)"
+              className={`px-2.5 py-1 rounded-lg font-semibold text-xs flex items-center space-x-1.5 border transition-colors cursor-pointer ml-1 ${
+                dbStatus.connected
+                  ? 'bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border-emerald-500/40'
+                  : 'bg-slate-800/80 hover:bg-slate-700 text-cyan-300 border-cyan-500/30'
+              }`}
+            >
+              <Database className={`w-3.5 h-3.5 ${isLoading ? 'animate-pulse text-yellow-400' : ''}`} />
+              <span className="hidden sm:inline">{dbStatus.connected ? 'Neon DB' : 'Database'}</span>
+              <span className={`w-1.5 h-1.5 rounded-full ${dbStatus.connected ? 'bg-emerald-400 animate-pulse' : 'bg-slate-400'}`} />
             </button>
 
             <button
               onClick={resetDemoData}
-              title="Reset ke Data Standar"
-              className="ml-1 text-slate-400 hover:text-amber-300 transition-colors p-1 flex items-center space-x-1 text-[11px] font-bold uppercase tracking-wider cursor-pointer"
+              title="Reset ke Data Awal"
+              className="ml-1 text-slate-400 hover:text-amber-300 transition-colors p-1 flex items-center space-x-1 text-xs font-semibold cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3" />
+              <RefreshCw className="w-3.5 h-3.5" />
               <span className="hidden md:inline">Reset</span>
             </button>
           </div>
         </div>
 
-        {/* Main Header */}
+        {/* Main Navbar */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
           {/* Brand */}
           <div className="flex items-center space-x-3 cursor-pointer" onClick={() => setActiveTab('dashboard')}>
-            <div className="bg-white text-[#2563EB] font-black px-2.5 py-1 rounded-xl text-lg tracking-tighter shadow-md">
-              CF.
+            <div className="bg-white text-blue-600 font-extrabold px-3 py-1.5 rounded-xl text-lg tracking-tight shadow-sm flex items-center justify-center">
+              CF
             </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-xl font-black text-white tracking-tight leading-none uppercase">Class Fund</h1>
-                <span className="text-[10px] font-black px-2 py-0.5 bg-white/20 text-white rounded-full uppercase tracking-wider">
+                <h1 className="text-lg font-bold text-white tracking-tight leading-none">Class Fund</h1>
+                <span className="text-[11px] font-semibold px-2 py-0.5 bg-white/15 text-blue-50 rounded-full border border-white/10">
                   {classGroup.name}
                 </span>
               </div>
-              <p className="text-[11px] text-blue-100 font-bold">
-                Kas Rp{(classGroup.weeklyDues || 6000).toLocaleString('id-ID')} / Minggu — {memberCount} Anggota
+              <p className="text-xs text-blue-100/90 font-medium">
+                Kas Rp{(classGroup.weeklyDues || 6000).toLocaleString('id-ID')} / minggu • {memberCount} Anggota
               </p>
             </div>
           </div>
 
-          {/* Navigation Tabs (Role Specific) */}
-          <nav className="hidden md:flex items-center space-x-1">
+          {/* Clean Navigation Tabs */}
+          <nav className="hidden md:flex items-center space-x-1 bg-white/10 p-1 rounded-xl border border-white/10">
             <button
               onClick={() => setActiveTab('dashboard')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'dashboard'
-                  ? 'bg-white text-[#2563EB] shadow-md'
-                  : 'text-white/90 hover:bg-white/10'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold'
+                  : 'text-white/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               {currentUser.role === 'bendahara' ? 'Dashboard Bendahara' : currentUser.role === 'admin' ? 'Dashboard Admin' : 'Beranda Saya'}
@@ -120,23 +136,23 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
               <>
                 <button
                   onClick={() => setActiveTab('bayar')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'bayar'
-                      ? 'bg-white text-[#2563EB] shadow-md'
-                      : 'text-white/90 hover:bg-white/10'
+                      ? 'bg-white text-blue-700 shadow-sm font-bold'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  Bayar Kas (Rp6.000)
+                  Bayar Kas
                 </button>
                 <button
                   onClick={() => setActiveTab('riwayat')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'riwayat'
-                      ? 'bg-white text-[#2563EB] shadow-md'
-                      : 'text-white/90 hover:bg-white/10'
+                      ? 'bg-white text-blue-700 shadow-sm font-bold'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  Riwayat Kas Saya
+                  Riwayat Saya
                 </button>
               </>
             )}
@@ -145,20 +161,20 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
               <>
                 <button
                   onClick={() => setActiveTab('pembayaran')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'pembayaran'
-                      ? 'bg-white text-[#2563EB] shadow-md'
-                      : 'text-white/90 hover:bg-white/10'
+                      ? 'bg-white text-blue-700 shadow-sm font-bold'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }`}
                 >
-                  Status 32 Anggota
+                  Kas Anggota ({memberCount})
                 </button>
                 <button
                   onClick={() => setActiveTab('pengeluaran')}
-                  className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                  className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                     activeTab === 'pengeluaran'
-                      ? 'bg-white text-[#2563EB] shadow-md'
-                      : 'text-white/90 hover:bg-white/10'
+                      ? 'bg-white text-blue-700 shadow-sm font-bold'
+                      : 'text-white/90 hover:bg-white/10 hover:text-white'
                   }`}
                 >
                   Catat Pengeluaran
@@ -168,10 +184,10 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
 
             <button
               onClick={() => setActiveTab('laporan')}
-              className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+              className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                 activeTab === 'laporan'
-                  ? 'bg-white text-[#2563EB] shadow-md'
-                  : 'text-white/90 hover:bg-white/10'
+                  ? 'bg-white text-blue-700 shadow-sm font-bold'
+                  : 'text-white/90 hover:bg-white/10 hover:text-white'
               }`}
             >
               Laporan Keuangan
@@ -180,86 +196,88 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
             {currentUser.role === 'admin' && (
               <button
                 onClick={() => setActiveTab('admin')}
-                className={`px-3.5 py-1.5 rounded-full text-xs font-black uppercase tracking-wider transition-all cursor-pointer ${
+                className={`px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   activeTab === 'admin'
-                    ? 'bg-white text-[#2563EB] shadow-md'
-                    : 'text-white/90 hover:bg-white/10'
+                    ? 'bg-white text-blue-700 shadow-sm font-bold'
+                    : 'text-white/90 hover:bg-white/10 hover:text-white'
                 }`}
               >
-                Pengaturan Admin
+                Pengaturan
               </button>
             )}
           </nav>
 
-          {/* Right Actions: QR Code, Notifications, Profile */}
+          {/* Right Actions */}
           <div className="flex items-center space-x-2">
-            {/* Member QR Code Button */}
             <button
               onClick={onOpenQrModal}
               className="p-2 text-white hover:bg-white/15 rounded-xl transition-colors relative cursor-pointer"
-              title="Tampilkan QR ID Kas Saya"
+              title="QR ID Anggota"
             >
               <QrCode className="w-5 h-5 text-white" />
             </button>
 
-            {/* Notifications Trigger */}
+            {/* Notifications Popover */}
             <div className="relative">
               <button
                 onClick={() => setShowNotificationsPopover(!showNotificationsPopover)}
                 className="p-2 text-white hover:bg-white/15 rounded-xl transition-colors relative cursor-pointer"
                 title="Notifikasi"
               >
-                <Bell className="w-5 h-5 text-white" />
+                <Bell className="w-5 h-5" />
                 {unreadCount > 0 && (
-                  <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-black flex items-center justify-center animate-pulse border border-white">
+                  <span className="absolute top-1 right-1 w-4 h-4 bg-rose-500 text-white font-bold text-[10px] rounded-full flex items-center justify-center ring-2 ring-blue-600">
                     {unreadCount}
                   </span>
                 )}
               </button>
 
-              {/* Notifications Popover */}
               {showNotificationsPopover && (
-                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 z-50 p-5 space-y-3">
-                  <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+                <div className="absolute right-0 mt-2 w-80 sm:w-96 bg-white rounded-2xl shadow-xl border border-slate-100 text-slate-800 z-50 overflow-hidden animate-fadeIn">
+                  <div className="p-3.5 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
                     <div className="flex items-center space-x-2">
-                      <h3 className="font-black text-slate-900 text-sm uppercase tracking-tight">Notifikasi</h3>
-                      {unreadCount > 0 && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-red-100 text-red-700 font-bold text-xs">
-                          {unreadCount} Baru
-                        </span>
-                      )}
+                      <Bell className="w-4 h-4 text-blue-600" />
+                      <span className="font-bold text-sm text-slate-800">Notifikasi</span>
                     </div>
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllNotificationsRead}
-                        className="text-xs text-[#2563EB] hover:underline font-bold cursor-pointer"
+                        className="text-xs font-semibold text-blue-600 hover:text-blue-700 cursor-pointer"
                       >
-                        Tandai dibaca
+                        Tandai semua dibaca
                       </button>
                     )}
                   </div>
 
-                  <div className="max-h-80 overflow-y-auto space-y-2.5 pr-1">
+                  <div className="max-h-80 overflow-y-auto divide-y divide-slate-50">
                     {myNotifications.length === 0 ? (
-                      <div className="text-center py-6 text-slate-400 text-xs font-bold uppercase tracking-wider">
-                        Belum ada notifikasi
+                      <div className="p-6 text-center text-slate-400 text-xs">
+                        Tidak ada notifikasi baru
                       </div>
                     ) : (
-                      myNotifications.map((notif) => (
+                      myNotifications.map((n) => (
                         <div
-                          key={notif.id}
-                          onClick={() => markNotificationRead(notif.id)}
-                          className={`p-3.5 rounded-2xl border text-xs cursor-pointer transition-all ${
-                            !notif.isRead
-                              ? 'bg-blue-50/80 border-blue-200 text-slate-900 font-medium shadow-xs'
-                              : 'bg-slate-50 border-slate-200 text-slate-600'
+                          key={n.id}
+                          onClick={() => markNotificationRead(n.id)}
+                          className={`p-3.5 hover:bg-slate-50 transition-colors cursor-pointer flex items-start space-x-3 ${
+                            !n.isRead ? 'bg-blue-50/50' : ''
                           }`}
                         >
-                          <div className="flex items-start justify-between gap-1 mb-1">
-                            <span className="font-extrabold text-slate-900">{notif.title}</span>
-                            <span className="text-[10px] text-slate-400 font-bold">{notif.createdAt}</span>
+                          <div className="shrink-0 mt-0.5">
+                            {n.type === 'payment_success' ? (
+                              <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                            ) : n.type === 'reminder' ? (
+                              <Sparkles className="w-4 h-4 text-amber-500" />
+                            ) : (
+                              <Info className="w-4 h-4 text-blue-500" />
+                            )}
                           </div>
-                          <p className="text-slate-600 leading-relaxed">{notif.message}</p>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs font-bold text-slate-900 truncate">{n.title}</p>
+                            <p className="text-xs text-slate-600 mt-0.5 leading-relaxed">{n.message}</p>
+                            <span className="text-[10px] text-slate-400 mt-1 block">{n.createdAt}</span>
+                          </div>
+                          {!n.isRead && <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1" />}
                         </div>
                       ))
                     )}
@@ -268,121 +286,75 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
               )}
             </div>
 
-            {/* Active Profile Pill */}
+            {/* Profile Dropdown */}
             <div className="relative">
               <button
                 onClick={() => setShowUserDropdown(!showUserDropdown)}
-                className="flex items-center space-x-2 p-1.5 rounded-full bg-white/10 hover:bg-white/20 transition-all border border-white/20 cursor-pointer"
+                className="flex items-center space-x-2 p-1.5 hover:bg-white/15 rounded-xl transition-colors cursor-pointer border border-transparent hover:border-white/10"
               >
-                <div className="relative">
-                  <img
-                    src={currentUser.avatar}
-                    alt={currentUser.name}
-                    className="w-8 h-8 rounded-full object-cover border-2 border-white"
-                  />
-                  <div className="absolute -bottom-0.5 -right-0.5 bg-[#2563EB] text-white p-0.5 rounded-full border border-white">
-                    <Camera className="w-2.5 h-2.5" />
-                  </div>
+                <img
+                  src={currentUser.avatar}
+                  alt={currentUser.name}
+                  className="w-8 h-8 rounded-full object-cover border border-white/50"
+                />
+                <div className="hidden lg:block text-left pr-1">
+                  <p className="text-xs font-bold text-white leading-tight truncate max-w-[120px]">{currentUser.name}</p>
+                  <p className="text-[10px] text-blue-100 font-medium capitalize">{currentUser.role}</p>
                 </div>
-                <div className="text-left hidden lg:block pr-1">
-                  <p className="text-xs font-black text-white leading-none">{currentUser.name}</p>
-                  <p className="text-[10px] text-blue-100 font-bold uppercase tracking-wider">{currentUser.role}</p>
-                </div>
-                <ChevronDown className="w-4 h-4 text-white/80 pr-0.5" />
+                <ChevronDown className="w-4 h-4 text-white/80" />
               </button>
 
-              {/* Profile / Switch User Dropdown */}
               {showUserDropdown && (
-                <div className="absolute right-0 mt-2 w-72 bg-white text-slate-800 rounded-3xl shadow-2xl border border-slate-200 z-50 p-3 space-y-2 text-xs">
-                  <div className="px-3 py-2.5 bg-slate-50 rounded-2xl border border-slate-100 space-y-2">
-                    <div className="flex items-center space-x-3">
-                      <div className="relative group cursor-pointer" onClick={() => {
+                <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 text-slate-800 z-50 overflow-hidden animate-fadeIn">
+                  <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center space-x-3">
+                    <img
+                      src={currentUser.avatar}
+                      alt={currentUser.name}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-white shadow-sm"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="font-bold text-sm text-slate-900 truncate">{currentUser.name}</p>
+                      <p className="text-xs text-slate-500 truncate">{currentUser.email}</p>
+                      <span className="inline-block mt-1 text-[10px] font-bold uppercase px-2 py-0.5 rounded-md bg-blue-100 text-blue-700">
+                        {currentUser.role}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="p-2 border-b border-slate-100">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        setShowEditNameModal(true);
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2 transition-colors cursor-pointer"
+                    >
+                      <Edit3 className="w-4 h-4 text-slate-400" />
+                      <span>Ubah Nama Tampilan</span>
+                    </button>
+                    <button
+                      onClick={() => {
                         setShowUserDropdown(false);
                         setShowProfilePhotoModal(true);
-                      }}>
-                        <img
-                          src={currentUser.avatar}
-                          alt={currentUser.name}
-                          className="w-10 h-10 rounded-full object-cover border-2 border-[#2563EB]"
-                        />
-                        <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                          <Camera className="w-4 h-4 text-white" />
-                        </div>
-                      </div>
-                      <div>
-                        <p className="font-black text-slate-900 text-sm">{currentUser.name}</p>
-                        <p className="text-slate-500 text-[11px] font-medium">{currentUser.email}</p>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          setShowEditNameModal(true);
-                        }}
-                        className="w-full py-2 bg-slate-200 hover:bg-slate-300 text-slate-800 rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 transition-colors cursor-pointer"
-                      >
-                        <Edit3 className="w-3.5 h-3.5 text-blue-600" />
-                        <span>Ganti Nama</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          setShowProfilePhotoModal(true);
-                        }}
-                        className="w-full py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-black text-[11px] uppercase tracking-wider flex items-center justify-center space-x-1 transition-colors cursor-pointer shadow-xs"
-                      >
-                        <Camera className="w-3.5 h-3.5" />
-                        <span>Ubah Foto</span>
-                      </button>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-1 border-t border-slate-200/60">
-                      <span className={`inline-block px-2.5 py-0.5 rounded-full text-white text-[10px] font-black uppercase tracking-wider ${roleColors[currentUser.role].badge}`}>
-                        ROLE: {currentUser.role.toUpperCase()}
-                      </span>
-                      <button
-                        onClick={() => {
-                          setShowUserDropdown(false);
-                          setShowPermissionModal(true);
-                        }}
-                        className="text-[10px] text-[#2563EB] font-bold hover:underline cursor-pointer"
-                      >
-                        Cek Hak Akses
-                      </button>
-                    </div>
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-slate-700 hover:bg-slate-50 rounded-lg flex items-center space-x-2 transition-colors cursor-pointer"
+                    >
+                      <Camera className="w-4 h-4 text-slate-400" />
+                      <span>Ganti Foto Profil</span>
+                    </button>
                   </div>
 
-                  <div className="px-2 py-1 text-[10px] uppercase tracking-widest font-black text-slate-400">
-                    Pilih Akun Demo (Total {users.length} Akun):
-                  </div>
-
-                  <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
-                    {users.map((u) => (
-                      <button
-                        key={u.id}
-                        onClick={() => {
-                          switchUser(u.id);
-                          setShowUserDropdown(false);
-                        }}
-                        className={`w-full flex items-center space-x-2 px-3 py-2 rounded-xl text-left transition-colors cursor-pointer ${
-                          u.id === currentUser.id
-                            ? 'bg-blue-50 text-[#2563EB] font-black shadow-xs'
-                            : 'hover:bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        <img src={u.avatar} alt={u.name} className="w-7 h-7 rounded-full object-cover" />
-                        <div className="flex-1 truncate">
-                          <p className="truncate font-bold">{u.name}</p>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold">{u.role}</p>
-                        </div>
-                        {u.id === currentUser.id && <CheckCircle className="w-4 h-4 text-[#2563EB]" />}
-                      </button>
-                    ))}
+                  <div className="p-2 border-t border-slate-100">
+                    <button
+                      onClick={() => {
+                        setShowUserDropdown(false);
+                        logout();
+                      }}
+                      className="w-full px-3 py-2 text-left text-xs font-semibold text-red-600 hover:bg-red-50 rounded-lg flex items-center space-x-2 transition-colors cursor-pointer"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>Keluar / Logout</span>
+                    </button>
                   </div>
                 </div>
               )}
@@ -405,6 +377,11 @@ export const HeaderNav: React.FC<HeaderNavProps> = ({ activeTab, setActiveTab, o
         user={currentUser}
         isOpen={showEditNameModal}
         onClose={() => setShowEditNameModal(false)}
+      />
+
+      <DatabaseModal
+        isOpen={showDatabaseModal}
+        onClose={() => setShowDatabaseModal(false)}
       />
     </>
   );

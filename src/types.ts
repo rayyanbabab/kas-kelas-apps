@@ -26,6 +26,7 @@ export interface User {
   classId: string;
   className: string;
   memberQrCode: string;
+  password?: string;
 }
 
 export interface ClassGroup {
